@@ -1,3 +1,3 @@
-discord.py
-python-dotenv
-flask
+py-cord==2.5.0
+flask==3.0.0
+python-dotenv==1.0.1
