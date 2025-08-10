@@ -3,6 +3,24 @@ from dotenv import load_dotenv
 import os
 import sqlite3
 import json
+from flask import Flask
+from threading import Thread
+import aiohttp
+import asyncio
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is alive!"
+
+def run():
+    port = int(os.getenv("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "DataBase", "xp.db")
@@ -112,6 +130,22 @@ def get_members_from_mentions(guild: discord.Guild, mentions: list[str]) -> list
             if member is not None:
                 members.append(member)
     return members
+
+
+async def ping_self():
+    url = f"http://127.0.0.1:{os.getenv('PORT', '8080')}/"
+    await bot.wait_until_ready()
+    session = aiohttp.ClientSession()
+    while not bot.is_closed():
+        try:
+            async with session.get(url) as resp:
+                print(f"Pinged self, status: {resp.status}")
+        except Exception as e:
+            print(f"Error pinging self: {e}")
+        await asyncio.sleep(600)
+    await session.close()
+
+bot.loop.create_task(ping_self())
 
 @bot.event
 async def on_ready():
@@ -331,4 +365,5 @@ https://discord.com/channels/1300485165994217472/1300670260583862335
     else:
         await ctx.respond(embed=discord.Embed(title="Ошибка", description="Эта команда не предназначена для этого канала.", color=discord.Color.red()), ephemeral=True)
 
+keep_alive()
 bot.run(BOT_TOKEN)
