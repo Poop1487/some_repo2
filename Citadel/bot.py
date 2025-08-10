@@ -19,7 +19,11 @@ def keep_alive():
     t = Thread(target=run)
     t.start()
 
-db = sqlite3.connect("DataBase/xp.db")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "DataBase", "xp.db")
+JSON_PATH = os.path.join(BASE_DIR, "DataBase", "logs_channel.json")
+
+db = sqlite3.connect(DB_PATH)
 cursor = db.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, xp INTEGER NOT NULL)")
 db.commit()
@@ -82,7 +86,7 @@ async def check_xp(member: discord.Member):
             cursor.execute("UPDATE users SET xp = ? WHERE id = ?", (0, member.id))
             db.commit()
             try:
-                with open("DataBase/logs_channel.json", "r", encoding="utf-8") as file:
+                with open(JSON_PATH, "r", encoding="utf-8") as file:
                     data = json.load(file)
                     promotion_channel_id = data.get("promotion_channel", -1)
                     promotion_channel = guild.get_channel(promotion_channel_id)
@@ -93,7 +97,7 @@ async def check_xp(member: discord.Member):
 
 async def send_log(ctx: discord.ApplicationContext, message: str, type: str):
     try:
-        with open("DataBase/logs_channel.json", "r", encoding="utf-8") as file:
+        with open(JSON_PATH, "r", encoding="utf-8") as file:
             data = json.load(file)
             channel_id = data.get("channel", -1)
             channel = bot.get_channel(channel_id)
@@ -126,10 +130,10 @@ def get_members_from_mentions(guild: discord.Guild, mentions: list[str]) -> list
 @bot.event
 async def on_ready():
     try:
-        with open("DataBase/logs_channel.json", "r", encoding="utf-8") as file:
+        with open(JSON_PATH, "r", encoding="utf-8") as file:
             json.load(file)
     except (FileNotFoundError, json.JSONDecodeError):
-        with open("DataBase/logs_channel.json", "w", encoding="utf-8") as file:
+        with open(JSON_PATH, "w", encoding="utf-8") as file:
             json.dump({"channel": -1, "promotion_channel": -1}, file, ensure_ascii=False, indent=4)
     for guild in bot.guilds:
         for member in guild.members:
@@ -295,10 +299,10 @@ async def about_bot(ctx: discord.ApplicationContext):
 async def chchannel(ctx: discord.ApplicationContext, channel: discord.TextChannel):
     role_ids = {role.id for role in ctx.user.roles}
     if role_ids & {1300600118202077246}:
-        with open("DataBase/logs_channel.json", "r", encoding="utf-8") as file:
+        with open(JSON_PATH, "r", encoding="utf-8") as file:
             data = json.load(file)
         data["channel"] = channel.id
-        with open("DataBase/logs_channel.json", "w", encoding="utf-8") as file:
+        with open(JSON_PATH, "w", encoding="utf-8") as file:
             json.dump(data, file, ensure_ascii=False, indent=4)
         await ctx.respond(embed=discord.Embed(title=f"Канал для логов был изменен на {channel.mention}", colour=0x48B5D6))
     else:
@@ -308,10 +312,10 @@ async def chchannel(ctx: discord.ApplicationContext, channel: discord.TextChanne
 async def chpromchannel(ctx: discord.ApplicationContext, channel: discord.TextChannel):
     role_ids = {role.id for role in ctx.user.roles}
     if role_ids & {1300600118202077246}:
-        with open("DataBase/logs_channel.json", "r", encoding="utf-8") as file:
+        with open(JSON_PATH, "r", encoding="utf-8") as file:
             data = json.load(file)
         data["promotion_channel"] = channel.id
-        with open("DataBase/logs_channel.json", "w", encoding="utf-8") as file:
+        with open(JSON_PATH, "w", encoding="utf-8") as file:
             json.dump(data, file, ensure_ascii=False, indent=4)
         await ctx.respond(embed=discord.Embed(title=f"Канал для логов повышений был изменен на {channel.mention}", colour=0x48B5D6))
     else:
