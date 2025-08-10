@@ -3,21 +3,6 @@ from dotenv import load_dotenv
 import os
 import sqlite3
 import json
-from flask import Flask
-from threading import Thread
-
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "Bot is alive!"
-
-def run():
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "DataBase", "xp.db")
@@ -346,5 +331,4 @@ https://discord.com/channels/1300485165994217472/1300670260583862335
     else:
         await ctx.respond(embed=discord.Embed(title="Ошибка", description="Эта команда не предназначена для этого канала.", color=discord.Color.red()), ephemeral=True)
 
-keep_alive()
 bot.run(BOT_TOKEN)
