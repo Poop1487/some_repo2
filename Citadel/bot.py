@@ -7,8 +7,6 @@ import asyncio
 from threading import Thread
 from google import generativeai as genai
 from pymongo import MongoClient
-import ssl
-print(ssl.OPENSSL_VERSION)
 
 MONGO_URI = "mongodb+srv://poopooops1488:EjcbWvruq5GDkctc@xp.6vqcwpw.mongodb.net/?retryWrites=true&w=majority&appName=XP"
 
@@ -24,7 +22,7 @@ def run_flask():
 
 url = "https://citadel-hnll.onrender.com"
 
-mongo_client = MongoClient(MONGO_URI)
+mongo_client = MongoClient(MONGO_URI, tls=True, tlsAllowInvalidCertificates=False,)
 db = mongo_client["xp_database"]
 users_collection = db["users"]
 
