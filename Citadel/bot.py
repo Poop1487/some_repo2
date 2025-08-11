@@ -8,7 +8,7 @@ from threading import Thread
 from google import generativeai as genai
 from pymongo import MongoClient
 
-MONGO_URI = "mongodb+srv://poopooops1488:EjcbWvruq5GDkctc@xp.6vqcwpw.mongodb.net/?retryWrites=true&w=majority&appName=XP"
+MONGO_URI = "mongodb+srv://poopooops1488:2mjHYEfGpMeVDc0S@xp.6vqcwpw.mongodb.net/?retryWrites=true&w=majority&appName=XP"
 
 app = Flask(__name__)
 
