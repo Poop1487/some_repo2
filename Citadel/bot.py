@@ -5,6 +5,19 @@ import sqlite3
 import json
 import asyncio
 import requests
+from flask import Flask
+from threading import Thread
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is alive!"
+
+def run_flask():
+    import os
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
 
 url = "https://citadel-hnll.onrender.com"
 
@@ -345,4 +358,5 @@ https://discord.com/channels/1300485165994217472/1300670260583862335
     else:
         await ctx.respond(embed=discord.Embed(title="Ошибка", description="Эта команда не предназначена для этого канала.", color=discord.Color.red()), ephemeral=True)
 
+Thread(target=run_flask).start()
 bot.run(BOT_TOKEN)
