@@ -3,8 +3,6 @@ from dotenv import load_dotenv
 import os
 import sqlite3
 import json
-import asyncio
-import requests
 from flask import Flask
 from threading import Thread
 
@@ -59,14 +57,6 @@ send_test_ranks = {
     1352357229663096903,
     1300986279659569235
 }
-
-async def keep_alive():
-    while True:
-        try:
-            requests.get(url=url)
-        except Exception as error:
-            bot.get_channel(1374363499458727946).send(f"<@926130802243305512> Далбаебище исправь меня, вот ошибка: {error}")
-        await asyncio.sleep(930)
             
 async def check_xp(member: discord.Member):
     cursor.execute("SELECT xp FROM users WHERE id = ?", (member.id,))
@@ -156,8 +146,6 @@ async def on_ready():
     for guild in bot.guilds:
         for member in guild.members:
             await check_xp(member)
-    
-    await keep_alive()
 
 @bot.event
 async def on_member_join(member):
