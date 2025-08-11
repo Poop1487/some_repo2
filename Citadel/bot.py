@@ -144,7 +144,7 @@ async def on_ready():
         for member in guild.members:
             await check_xp(member)
     
-    keep_alive()
+    await keep_alive()
 
 @bot.event
 async def on_member_join(member):
