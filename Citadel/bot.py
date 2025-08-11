@@ -1,12 +1,14 @@
 import discord
 from dotenv import load_dotenv
 import os
-import sqlite3
 import json
 from flask import Flask
 import asyncio
 from threading import Thread
 from google import generativeai as genai
+from pymongo import MongoClient
+
+MONGO_URI = "mongodb+srv://poopooops1488:EjcbWvruq5GDkctc@xp.6vqcwpw.mongodb.net/?retryWrites=true&w=majority&appName=XP"
 
 app = Flask(__name__)
 
@@ -15,23 +17,16 @@ def home():
     return "Bot is alive!"
 
 def run_flask():
-    import os
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
 url = "https://citadel-hnll.onrender.com"
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "DataBase", "xp.db")
-JSON_PATH = os.path.join(BASE_DIR, "DataBase", "logs_channel.json")
-
-db = sqlite3.connect(DB_PATH)
-cursor = db.cursor()
-cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, xp INTEGER NOT NULL)")
-db.commit()
+mongo_client = MongoClient(MONGO_URI)
+db = mongo_client["xp_database"]
+users_collection = db["users"]
 
 load_dotenv(dotenv_path="env.env")
-# BOT_TOKEN = os.getenv("BOT_TOKEN")
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 GEMINI_TOKEN = os.environ["GEMINI_TOKEN"]
 
@@ -63,13 +58,26 @@ send_test_ranks = {
     1352357229663096903,
     1300986279659569235
 }
-            
+
+JSON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "DataBase", "logs_channel.json")
+
+def get_user_xp(user_id: int) -> int:
+    user = users_collection.find_one({"user_id": user_id})
+    if user and "xp" in user:
+        return user["xp"]
+    return 0
+
+def set_user_xp(user_id: int, xp: int):
+    users_collection.update_one(
+        {"user_id": user_id},
+        {"$set": {"xp": xp}},
+        upsert=True
+    )
+
 async def check_xp(member: discord.Member):
-    cursor.execute("SELECT xp FROM users WHERE id = ?", (member.id,))
-    result = cursor.fetchone()
-    if not result:
+    user_xp = get_user_xp(member.id)
+    if user_xp == 0:
         return
-    user_xp = result[0]
     sorted_ranks = sorted(ranks.items(), key=lambda x: x[1])
     member_role_ids = {role.id for role in member.roles}
     current_role_index = None
@@ -90,15 +98,17 @@ async def check_xp(member: discord.Member):
                 if old_role:
                     await member.remove_roles(old_role)
             await member.add_roles(next_role)
-            cursor.execute("UPDATE users SET xp = ? WHERE id = ?", (0, member.id))
-            db.commit()
+            set_user_xp(member.id, 0)
             try:
                 with open(JSON_PATH, "r", encoding="utf-8") as file:
                     data = json.load(file)
                     promotion_channel_id = data.get("promotion_channel", -1)
                     promotion_channel = guild.get_channel(promotion_channel_id)
                     if promotion_channel:
-                        await promotion_channel.send(embed=discord.Embed(title="`Автоматическое повышение`", description=f"`{member.mention} на ранг {next_role.mention} за {next_role_xp} ⚛︎ XP.`", colour=0x48B5D6))
+                        await promotion_channel.send(embed=discord.Embed(
+                            title="`Автоматическое повышение`",
+                            description=f"`{member.mention} на ранг {next_role.mention} за {next_role_xp} ⚛︎ XP.`",
+                            colour=0x48B5D6))
             except Exception:
                 pass
 
@@ -142,26 +152,27 @@ async def on_ready():
     except (FileNotFoundError, json.JSONDecodeError):
         with open(JSON_PATH, "w", encoding="utf-8") as file:
             json.dump({"channel": -1, "promotion_channel": -1}, file, ensure_ascii=False, indent=4)
+
     for guild in bot.guilds:
         for member in guild.members:
-            cursor.execute("SELECT xp FROM users WHERE id = ?", (member.id,))
-            if cursor.fetchone() is None:
-                cursor.execute("INSERT INTO users (id, xp) VALUES (?, ?)", (member.id, 0))
-    db.commit()
+            if get_user_xp(member.id) == 0:
+                set_user_xp(member.id, 0)
 
     for guild in bot.guilds:
         for member in guild.members:
             await check_xp(member)
 
     await asyncio.sleep(850)
-    await bot.get_channel(1374363499458727946).send(embed=discord.Embed(title="Я погружаюсь в сон...", description=f"Но если ты решишь разбудить меня - перейди по этой ссылке: {url}", color=discord.Color.red()))
+    await bot.get_channel(1374363499458727946).send(embed=discord.Embed(
+        title="Я погружаюсь в сон...",
+        description=f"Но если ты решишь разбудить меня - перейди по этой ссылке: {url}",
+        color=discord.Color.red()
+    ))
 
 @bot.event
 async def on_member_join(member):
-    cursor.execute("SELECT xp FROM users WHERE id = ?", (member.id,))
-    if cursor.fetchone() is None:
-        cursor.execute("INSERT INTO users (id, xp) VALUES (?, ?)", (member.id, 0))
-        db.commit()
+    if get_user_xp(member.id) == 0:
+        set_user_xp(member.id, 0)
     await check_xp(member)
 
 @bot.event
@@ -179,12 +190,10 @@ https://discord.com/channels/1300485165994217472/1300670260583862335
 https://discord.com/channels/1300485165994217472/1301504588393877514
 https://discord.com/channels/1300485165994217472/1350278142107062312
 """)
-                
+
 @bot.slash_command(name="xp", description="Review someone's XP")
 async def xp(ctx: discord.ApplicationContext, member: discord.Member):
-    cursor.execute('SELECT xp FROM users WHERE id = ?', (member.id,))
-    result = cursor.fetchone()
-    xp_amount = result[0] if result else 0
+    xp_amount = get_user_xp(member.id)
     await check_xp(member)
     await ctx.respond(embed=discord.Embed(title="Баланс XP", description=f"{member.mention} имеет `{xp_amount} ⚛︎` XP.", colour=0x48B5D6))
 
@@ -193,29 +202,24 @@ async def addxp(ctx: discord.ApplicationContext, amount: int, member: discord.Me
     if not has_allowed_role(ctx):
         await ctx.respond(embed=discord.Embed(title="Ошибка", description="У вас нет прав на выполнение этой команды.", color=discord.Color.red()), ephemeral=True)
         return
-    cursor.execute('SELECT xp FROM users WHERE id = ?', (member.id,))
-    result = cursor.fetchone()
-    newAm = (result[0] if result else 0) + amount
-    cursor.execute('UPDATE users SET xp = ? WHERE id = ?', (newAm, member.id))
-    db.commit()
+    current_xp = get_user_xp(member.id)
+    new_xp = current_xp + amount
+    set_user_xp(member.id, new_xp)
     await check_xp(member)
     await send_log(ctx, f"{ctx.author.mention} выдал {member.mention} {amount} баллов.", "+")
-    await ctx.respond(embed=discord.Embed(title="XP Добавлено", description=f"{member.mention} получил `{amount} ⚛︎` XP.\nНовый баланс: `{newAm} ⚛︎`", colour=0x48B5D6))
+    await ctx.respond(embed=discord.Embed(title="XP Добавлено", description=f"{member.mention} получил `{amount} ⚛︎` XP.\nНовый баланс: `{new_xp} ⚛︎`", colour=0x48B5D6))
 
 @bot.slash_command(name="remxp", description="Remove XP from someone")
 async def remxp(ctx: discord.ApplicationContext, amount: int, member: discord.Member):
     if not has_allowed_role(ctx):
         await ctx.respond(embed=discord.Embed(title="Ошибка", description="У вас нет прав на выполнение этой команды.", color=discord.Color.red()), ephemeral=True)
         return
-    cursor.execute('SELECT xp FROM users WHERE id = ?', (member.id,))
-    result = cursor.fetchone()
-    current_xp = result[0] if result else 0
-    newAm = max(current_xp - amount, 0)
-    cursor.execute('UPDATE users SET xp = ? WHERE id = ?', (newAm, member.id))
-    db.commit()
+    current_xp = get_user_xp(member.id)
+    new_xp = max(current_xp - amount, 0)
+    set_user_xp(member.id, new_xp)
     await check_xp(member)
     await send_log(ctx, f"{ctx.author.mention} снял {member.mention} {amount} баллов.", "-")
-    await ctx.respond(embed=discord.Embed(title="XP Удалено", description=f"{member.mention} потерял `{amount} ⚛︎` XP.\nНовый баланс: `{newAm} ⚛︎`", colour=0x48B5D6))
+    await ctx.respond(embed=discord.Embed(title="XP Удалено", description=f"{member.mention} потерял `{amount} ⚛︎` XP.\nНовый баланс: `{new_xp} ⚛︎`", colour=0x48B5D6))
 
 @bot.slash_command(name="setxp", description="Set someone's XP to a certain value")
 async def setxp(ctx: discord.ApplicationContext, amount: int, member: discord.Member):
@@ -223,8 +227,7 @@ async def setxp(ctx: discord.ApplicationContext, amount: int, member: discord.Me
         await ctx.respond(embed=discord.Embed(title="Ошибка", description="У вас нет прав на выполнение этой команды.", color=discord.Color.red()), ephemeral=True)
         return
     amount_to_set = max(amount, 0)
-    cursor.execute("UPDATE users SET xp = ? WHERE id = ?", (amount_to_set, member.id))
-    db.commit()
+    set_user_xp(member.id, amount_to_set)
     await check_xp(member)
     await send_log(ctx, f"{ctx.author.mention} выставил {member.mention} {amount} баллов.", "=")
     await ctx.respond(embed=discord.Embed(title="XP Установлено", description=f"Баланс {member.mention} установлен на `{amount_to_set} ⚛︎`", colour=0x48B5D6))
@@ -240,12 +243,10 @@ async def addexptogroup(ctx: discord.ApplicationContext, amount: int, mentions: 
         await ctx.respond(embed=discord.Embed(title="Ошибка", description="Не удалось найти указанных участников.", colour=0x48B5D6))
         return
     for member in members:
-        cursor.execute('SELECT xp FROM users WHERE id = ?', (member.id,))
-        result = cursor.fetchone()
-        newAm = (result[0] if result else 0) + amount
-        cursor.execute('UPDATE users SET xp = ? WHERE id = ?', (newAm, member.id))
+        current_xp = get_user_xp(member.id)
+        new_xp = current_xp + amount
+        set_user_xp(member.id, new_xp)
         await check_xp(member)
-    db.commit()
     mentions_str = "\n".join(member.mention for member in members)
     await send_log(ctx, f"{ctx.author.mention} выдал {amount} баллов группе: {mentions_str}", "+")
     await ctx.respond(embed=discord.Embed(title="XP Добавлено группе", description=f"Добавлено по `{amount} ⚛︎` следующим участникам:\n{mentions_str}", colour=0x48B5D6))
@@ -261,13 +262,10 @@ async def remexpfromgroup(ctx: discord.ApplicationContext, amount: int, mentions
         await ctx.respond(embed=discord.Embed(title="Ошибка", description="Не удалось найти указанных участников.", colour=0x48B5D6))
         return
     for member in members:
-        cursor.execute('SELECT xp FROM users WHERE id = ?', (member.id,))
-        result = cursor.fetchone()
-        current_xp = result[0] if result else 0
-        newAm = max(current_xp - amount, 0)
-        cursor.execute('UPDATE users SET xp = ? WHERE id = ?', (newAm, member.id))
+        current_xp = get_user_xp(member.id)
+        new_xp = max(current_xp - amount, 0)
+        set_user_xp(member.id, new_xp)
         await check_xp(member)
-    db.commit()
     mentions_str = "\n".join(member.mention for member in members)
     await send_log(ctx, f"{ctx.author.mention} снял {amount} баллов группе: {mentions_str}", "-")
     await ctx.respond(embed=discord.Embed(title="XP Удалено у группы", description=f"Убрано по `{amount} ⚛︎` у следующих участников:\n{mentions_str}", colour=0x48B5D6))
@@ -284,9 +282,8 @@ async def setexpforgroup(ctx: discord.ApplicationContext, amount: int, mentions:
         return
     amount_to_set = max(amount, 0)
     for member in members:
-        cursor.execute('UPDATE users SET xp = ? WHERE id = ?', (amount_to_set, member.id))
+        set_user_xp(member.id, amount_to_set)
         await check_xp(member)
-    db.commit()
     mentions_str = "\n".join(member.mention for member in members)
     await send_log(ctx, f"{ctx.author.mention} выставил {amount} баллов группе: {mentions_str}", "=")
     await ctx.respond(embed=discord.Embed(title="XP Установлено группе", description=f"Баланс установлен на `{amount_to_set} ⚛︎` следующим участникам:\n{mentions_str}", colour=0x48B5D6))
@@ -309,12 +306,15 @@ async def about_bot(ctx: discord.ApplicationContext):
 async def chchannel(ctx: discord.ApplicationContext, channel: discord.TextChannel):
     role_ids = {role.id for role in ctx.user.roles}
     if role_ids & {1300600118202077246}:
-        with open(JSON_PATH, "r", encoding="utf-8") as file:
-            data = json.load(file)
-        data["channel"] = channel.id
-        with open(JSON_PATH, "w", encoding="utf-8") as file:
-            json.dump(data, file, ensure_ascii=False, indent=4)
-        await ctx.respond(embed=discord.Embed(title=f"Канал для логов был изменен на {channel.mention}", colour=0x48B5D6))
+        try:
+            with open(JSON_PATH, "r", encoding="utf-8") as file:
+                data = json.load(file)
+            data["channel"] = channel.id
+            with open(JSON_PATH, "w", encoding="utf-8") as file:
+                json.dump(data, file, ensure_ascii=False, indent=4)
+            await ctx.respond(embed=discord.Embed(title=f"Канал для логов был изменен на {channel.mention}", colour=0x48B5D6))
+        except Exception as e:
+            await ctx.respond(embed=discord.Embed(title="Ошибка", description=f"Ошибка при изменении канала: {e}", color=discord.Color.red()), ephemeral=True)
     else:
         await ctx.respond(embed=discord.Embed(title="Ошибка", description="У вас нет прав на выполнение этой команды.", color=discord.Color.red()), ephemeral=True)
 
@@ -322,64 +322,31 @@ async def chchannel(ctx: discord.ApplicationContext, channel: discord.TextChanne
 async def chpromchannel(ctx: discord.ApplicationContext, channel: discord.TextChannel):
     role_ids = {role.id for role in ctx.user.roles}
     if role_ids & {1300600118202077246}:
-        with open(JSON_PATH, "r", encoding="utf-8") as file:
-            data = json.load(file)
-        data["promotion_channel"] = channel.id
-        with open(JSON_PATH, "w", encoding="utf-8") as file:
-            json.dump(data, file, ensure_ascii=False, indent=4)
-        await ctx.respond(embed=discord.Embed(title=f"Канал для логов повышений был изменен на {channel.mention}", colour=0x48B5D6))
+        try:
+            with open(JSON_PATH, "r", encoding="utf-8") as file:
+                data = json.load(file)
+            data["promotion_channel"] = channel.id
+            with open(JSON_PATH, "w", encoding="utf-8") as file:
+                json.dump(data, file, ensure_ascii=False, indent=4)
+            await ctx.respond(embed=discord.Embed(title=f"Канал для логов повышений был изменен на {channel.mention}", colour=0x48B5D6))
+        except Exception as e:
+            await ctx.respond(embed=discord.Embed(title="Ошибка", description=f"Ошибка при изменении канала: {e}", color=discord.Color.red()), ephemeral=True)
     else:
         await ctx.respond(embed=discord.Embed(title="Ошибка", description="У вас нет прав на выполнение этой команды.", color=discord.Color.red()), ephemeral=True)
 
-@bot.slash_command(name="принять", description="Join to the fraction")
-async def принять(ctx: discord.ApplicationContext, member: discord.Member):
-    if not has_allowed_role(ctx):
-        await ctx.respond(embed=discord.Embed(title="Ошибка", description="У вас нет прав на выполнение этой команды.", color=discord.Color.red()), ephemeral=True)
-        return
-    if ctx.channel_id == 1300669144856789023:
-        await member.send("""
-> Добро пожаловать в Лазарет! Ознакомьтесь с ключевыми каналами:
-https://discord.com/channels/1300485165994217472/1300668883266703360
-https://discord.com/channels/1300485165994217472/1300669020642742282
-https://discord.com/channels/1300485165994217472/1300669769514614914
-https://discord.com/channels/1300485165994217472/1349466548619710515
-https://discord.com/channels/1300485165994217472/1395854017439072306
-https://discord.com/channels/1300485165994217472/1300670260583862335
-""")
-        guild = member.guild
-        await member.remove_roles(guild.get_role(1300986977017135147))
-        for id in {1352359283689525390, 1352359186524143778, 1352355528428490834, 1352359414329512037, 1352359802294243421}:
-            role = guild.get_role(id)
-            await member.add_roles(role)
-        await ctx.respond(embed=discord.Embed(title="Принятие успешно", description=f"{member.mention} был принят в лазарет", colour=0x48B5D6))
-    else:
-        await ctx.respond(embed=discord.Embed(title="Ошибка", description="Эта команда не предназначена для этого канала.", color=discord.Color.red()), ephemeral=True)
+@bot.slash_command(name="ask", description="Ask Gemini model")
+async def ask(ctx: discord.ApplicationContext, prompt: str):
+    async with ctx.typing():
+        response = model.generate(
+            prompt=prompt,
+            temperature=0.1,
+            candidate_count=1,
+            top_p=0.8,
+            top_k=40,
+            max_output_tokens=256
+        )
+    await ctx.respond(response.candidates[0].content)
 
-@bot.slash_command(name="askthecitadel", description="Ask the Citadel bot something")
-async def askthecitadel(ctx: discord.ApplicationContext, question: str):
-    await ctx.defer()
-    prompt = (f"""
-Ты - дискорд бот под именем 'Citadel bot' или на русском языке 'Лазарет бот'
-Ты - врач и ты можеш давать советы по медицине, ты используешся для игры и твои советы НЕ будут использоваться в реальной жизни, так что можеш ошибаться.
-Твоя задача отвечать на вопросы.
-На данном проекте нету магии, проект называется Элитарпия РП, а ты создан для дискорд сервера одного из фракци на данном проекта, а именно - Лазарет.
-Не добавляй лишних строчек, только ответ на вопрос, никаких привествий и подобной не нужней чепухи
-Вот сам вопрос: {question}
-""")
-    try:
-        response = await model.generate_content_async(prompt)
-        answer_text = response.text
-        await ctx.followup.send(embed=discord.Embed(
-            title=f"Лазарет бот ответил на ваш вопрос {question}",
-            description=answer_text,
-            colour=0x48B5D6
-        ))
-    except Exception as error:
-        await ctx.followup.send(embed=discord.Embed(
-            title="Ошибка",
-            description=f"Возникла ошибка, сообщите о ней разработчику бота - <@926130802243305512>. Error: {error}",
-            color=discord.Color.red()
-        ))
-
-Thread(target=run_flask).start()
-bot.run(BOT_TOKEN)
+if __name__ == "__main__":
+    Thread(target=run_flask).start()
+    bot.run(BOT_TOKEN)

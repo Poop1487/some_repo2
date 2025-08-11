@@ -3,3 +3,4 @@ python-dotenv
 flask
 asyncio
 google-generativeai
+pymongo[srv]==3.12
