@@ -22,7 +22,7 @@ def run_flask():
 
 url = "https://citadel-hnll.onrender.com"
 
-mongo_client = MongoClient(MONGO_URI, tls=True, tlsAllowInvalidCertificates=False,)
+mongo_client = MongoClient(MONGO_URI, tls=True, tlsAllowInvalidCertificates=True)
 db = mongo_client["xp_database"]
 users_collection = db["users"]
 
