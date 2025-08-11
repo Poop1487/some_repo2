@@ -148,8 +148,8 @@ async def on_ready():
         for member in guild.members:
             await check_xp(member)
 
-    asyncio.sleep(900)
-    bot.get_channel(1374363499458727946).send(embed=discord.Embed(title="Я скользну в объятия сна...", description=f"Но если ты решишь разбудить меня - перейди по этой ссылке: {url}", color=discord.Color.red()))
+    await asyncio.sleep(850)
+    await bot.get_channel(1374363499458727946).send(embed=discord.Embed(title="Я погружаюсь в сон...", description=f"Но если ты решишь разбудить меня - перейди по этой ссылке: {url}", color=discord.Color.red()))
 
 @bot.event
 async def on_member_join(member):
