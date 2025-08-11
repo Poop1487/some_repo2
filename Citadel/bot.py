@@ -53,7 +53,7 @@ async def keep_alive():
             requests.get(url=url)
         except Exception as error:
             bot.get_channel(1374363499458727946).send(f"<@926130802243305512> Далбаебище исправь меня, вот ошибка: {error}")
-        await asyncio.sleep(600)
+        await asyncio.sleep(930)
             
 async def check_xp(member: discord.Member):
     cursor.execute("SELECT xp FROM users WHERE id = ?", (member.id,))
