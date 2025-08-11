@@ -3,24 +3,10 @@ from dotenv import load_dotenv
 import os
 import sqlite3
 import json
-from flask import Flask
-from threading import Thread
-import aiohttp
 import asyncio
+import requests
 
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "Bot is alive!"
-
-def run():
-    port = int(os.getenv("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
+url = "https://citadel-hnll.onrender.com"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "DataBase", "xp.db")
@@ -61,6 +47,14 @@ send_test_ranks = {
     1300986279659569235
 }
 
+async def keep_alive():
+    while True:
+        try:
+            requests.get(url=url)
+        except Exception as error:
+            bot.get_channel(1374363499458727946).send(f"<@926130802243305512> Далбаебище исправь меня, вот ошибка: {error}")
+        await asyncio.sleep(600)
+            
 async def check_xp(member: discord.Member):
     cursor.execute("SELECT xp FROM users WHERE id = ?", (member.id,))
     result = cursor.fetchone()
@@ -165,6 +159,8 @@ async def on_ready():
     for guild in bot.guilds:
         for member in guild.members:
             await check_xp(member)
+    
+    keep_alive()
 
 @bot.event
 async def on_member_join(member):
@@ -365,5 +361,4 @@ https://discord.com/channels/1300485165994217472/1300670260583862335
     else:
         await ctx.respond(embed=discord.Embed(title="Ошибка", description="Эта команда не предназначена для этого канала.", color=discord.Color.red()), ephemeral=True)
 
-keep_alive()
 bot.run(BOT_TOKEN)
