@@ -357,6 +357,7 @@ https://discord.com/channels/1300485165994217472/1300670260583862335
 
 @bot.slash_command(name="askthecitadel", description="Ask the Citadel bot something")
 async def askthecitadel(ctx: discord.ApplicationContext, question: str):
+    await ctx.defer()
     prompt = (f"""
 Ты - дискорд бот под именем 'Citadel bot' или на русском языке 'Лазарет бот'
 Твоя задача отвечать на вопросы, которые связанны с медициной, если видиш запрос, который с ним не связан
@@ -365,13 +366,20 @@ async def askthecitadel(ctx: discord.ApplicationContext, question: str):
 Не добавляй лишних строчек, только ответ на вопрос, никаких привествий и подобной не нужней чепухи
 Вот сам вопрос: {question}
 """)
-
     try:
         response = await model.generate_content_async(prompt)
         answer_text = response.text
-        await ctx.respond(embed=discord.Embed(title=f"Лазарет бот ответил на ваш вопрос {question}", description=answer_text, colour=0x48B5D6))
+        await ctx.followup.send(embed=discord.Embed(
+            title=f"Лазарет бот ответил на ваш вопрос {question}",
+            description=answer_text,
+            colour=0x48B5D6
+        ))
     except Exception as error:
-        await ctx.respond(embed=discord.Embed(title="Ошибка", description=f"Возникла ошибка, сообщите о ней разработчику бота - <@926130802243305512>. Error: {error}", color=discord.Color.red()), ephemeral=True)
+        await ctx.followup.send(embed=discord.Embed(
+            title="Ошибка",
+            description=f"Возникла ошибка, сообщите о ней разработчику бота - <@926130802243305512>. Error: {error}",
+            color=discord.Color.red()
+        ))
 
 Thread(target=run_flask).start()
 bot.run(BOT_TOKEN)
