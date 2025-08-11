@@ -125,22 +125,6 @@ def get_members_from_mentions(guild: discord.Guild, mentions: list[str]) -> list
                 members.append(member)
     return members
 
-
-async def ping_self():
-    url = f"http://127.0.0.1:{os.getenv('PORT', '8080')}/"
-    await bot.wait_until_ready()
-    session = aiohttp.ClientSession()
-    while not bot.is_closed():
-        try:
-            async with session.get(url) as resp:
-                print(f"Pinged self, status: {resp.status}")
-        except Exception as e:
-            print(f"Error pinging self: {e}")
-        await asyncio.sleep(600)
-    await session.close()
-
-bot.loop.create_task(ping_self())
-
 @bot.event
 async def on_ready():
     try:
