@@ -4,6 +4,7 @@ import os
 import sqlite3
 import json
 from flask import Flask
+import asyncio
 from threading import Thread
 
 app = Flask(__name__)
@@ -146,6 +147,9 @@ async def on_ready():
     for guild in bot.guilds:
         for member in guild.members:
             await check_xp(member)
+
+    asyncio.sleep(900)
+    bot.get_channel(1374363499458727946).send(embed=discord.Embed(title="Я скользну в объятия сна...", description=f"Но если ты решишь разбудить меня - перейди по этой ссылке: {url}", color=discord.Color.red()))
 
 @bot.event
 async def on_member_join(member):
