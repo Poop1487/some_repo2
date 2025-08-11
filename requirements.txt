@@ -2,4 +2,4 @@ py-cord==2.5.0
 python-dotenv
 flask
 asyncio
-google
+google-generativeai
