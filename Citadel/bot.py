@@ -7,6 +7,8 @@ import asyncio
 from threading import Thread
 from google import generativeai as genai
 from pymongo import MongoClient
+import ssl
+print(ssl.OPENSSL_VERSION)
 
 MONGO_URI = "mongodb+srv://poopooops1488:EjcbWvruq5GDkctc@xp.6vqcwpw.mongodb.net/?retryWrites=true&w=majority&appName=XP"
 
