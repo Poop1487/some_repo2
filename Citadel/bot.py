@@ -13,6 +13,8 @@ import certifi
 import ssl
 print(ssl.OPENSSL_VERSION)
 
+ssl_context = ssl.create_default_context(cafile=certifi.where())
+ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
 uri = "mongodb+srv://poopooops1488:2mjHYEfGpMeVDc0S@xp.exi9hjl.mongodb.net/?retryWrites=true&w=majority&appName=XP"
 
 app = Flask(__name__)
@@ -31,6 +33,7 @@ client = AsyncIOMotorClient(
     uri,
     tls=True,
     tlsCAFile=certifi.where(),
+    ssl=ssl_context,
     server_api=ServerApi('1')
 )
 db = client["XP"]
