@@ -24,7 +24,12 @@ def run_flask():
 
 url = "https://citadel-hnll.onrender.com"
 
-client = AsyncIOMotorClient(uri, server_api=ServerApi('1'))
+client = AsyncIOMotorClient(
+    uri,
+    tls=True,
+    tlsAllowInvalidCertificates=True,
+    server_api=ServerApi('1')
+)
 db = client["XP"]
 collection = db["XP"]
 
