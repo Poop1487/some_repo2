@@ -7,10 +7,10 @@ from flask import Flask
 import asyncio
 from threading import Thread
 from google import generativeai as genai
-from pymongo import MongoClient
-import certifi
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 
-MONGO_URI = "mongodb+srv://poopooops1488:2mjHYEfGpMeVDc0S@xp.exi9hjl.mongodb.net/?retryWrites=true&w=majority&appName=XP"
+uri = "mongodb+srv://poopooops1488:2mjHYEfGpMeVDc0S@xp.exi9hjl.mongodb.net/?retryWrites=true&w=majority&appName=XP"
 
 app = Flask(__name__)
 
@@ -24,18 +24,10 @@ def run_flask():
 
 url = "https://citadel-hnll.onrender.com"
 
-mongo_client = MongoClient(
-    MONGO_URI,
-    tls=True,
-    tlsCAFile=certifi.where(),
-    serverSelectionTimeoutMS=5000,
-    connectTimeoutMS=5000,
-    maxPoolSize=50,
-    retryWrites=True
-)
+client = MongoClient(uri, server_api=ServerApi('1'))
 
-db = mongo_client["xp_database"]
-users_collection = db["users"]
+db = client["XP"]
+collection = db["XP"]
 
 load_dotenv(dotenv_path="env.env")
 BOT_TOKEN = os.environ["BOT_TOKEN"]
@@ -74,9 +66,9 @@ JSON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "DataBase",
 
 def get_user_xp(user_id: int) -> int:
     try:
-        user = users_collection.find_one({"user_id": user_id})
-        if user and "xp" in user:
-            return user["xp"]
+        result = collection.find_one({"user_id": user_id})
+        if result:
+            return result["number"]
         return 0
     except Exception as e:
         print(f"Error getting user XP: {e}")
@@ -84,9 +76,9 @@ def get_user_xp(user_id: int) -> int:
 
 def set_user_xp(user_id: int, xp: int):
     try:
-        users_collection.update_one(
-            {"user_id": user_id},
-            {"$set": {"xp": xp}},
+        collection.update_one(
+            {"user_id": 926130802243305512},
+            {"$set": {"number": 200}},
             upsert=True
         )
     except Exception as e:
