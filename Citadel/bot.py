@@ -435,7 +435,7 @@ async def ask(ctx, *, prompt: str):
                     max_output_tokens=256
                 )
             )
-        await ctx.send(response.text[:2000])
+        await ctx.send(embed=discord.Embed(title=response.text[:2000], colour=0x48B5D6))
     except Exception as e:
         print(f"Error in ask slash_command: {e}")
         await ctx.send(embed=discord.Embed(title="Ошибка", description="Произошла ошибка при обращении к AI.", color=discord.Color.red()), delete_after=5)
