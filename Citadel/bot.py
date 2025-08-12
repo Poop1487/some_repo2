@@ -429,6 +429,5 @@ async def ask(ctx, *, prompt: str):
         print(f"Error in ask command: {e}")
         await ctx.send(embed=discord.Embed(title="Ошибка", description="Произошла ошибка при обращении к AI.", color=discord.Color.red()), delete_after=5)
 
-if __name__ == "__main__":
-    Thread(target=run_flask).start()
-    bot.run(BOT_TOKEN)
+Thread(target=run_flask).start()
+bot.run(BOT_TOKEN)
