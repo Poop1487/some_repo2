@@ -9,6 +9,9 @@ from google import generativeai as genai
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from motor.motor_asyncio import AsyncIOMotorClient
+import certifi
+import ssl
+print(ssl.OPENSSL_VERSION)
 
 uri = "mongodb+srv://poopooops1488:2mjHYEfGpMeVDc0S@xp.exi9hjl.mongodb.net/?retryWrites=true&w=majority&appName=XP"
 
@@ -27,7 +30,7 @@ url = "https://citadel-hnll.onrender.com"
 client = AsyncIOMotorClient(
     uri,
     tls=True,
-    tlsAllowInvalidCertificates=True,
+    tlsCAFile=certifi.where(),
     server_api=ServerApi('1')
 )
 db = client["XP"]
