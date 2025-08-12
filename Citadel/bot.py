@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import slash_commands
 from dotenv import load_dotenv
 import os
 import json
@@ -39,7 +39,7 @@ model = genai.GenerativeModel("models/gemma-3n-e4b-it")
 intents = discord.Intents.default()
 intents.members = True
 
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = discord.Bot(intents=intents)
 
 colors = {
     "-": discord.Color.red(),
@@ -139,10 +139,10 @@ async def send_log(ctx, message: str, type: str):
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         await ctx.send(embed=discord.Embed(title="Ошибка", description="Файл логов не найден или содержит неверный формат.", color=discord.Color.red()), delete_after=5)
 
-def has_allowed_role(ctx, command_name: str = "") -> bool:
+def has_allowed_role(ctx, slash_command_name: str = "") -> bool:
     role_ids = {role.id for role in ctx.author.roles}
     if role_ids & {1352360671198838824, 1300600118202077246, 1300601915263946814}:
-        if command_name in {"setxp", "setxpforgroup"} and 1352360671198838824 in role_ids:
+        if slash_command_name in {"setxp", "setxpforgroup"} and 1352360671198838824 in role_ids:
             return False
         return True
     return False
@@ -227,7 +227,7 @@ https://discord.com/channels/1300485165994217472/1350278142107062312
     except Exception as e:
         print(f"Error in on_member_update: {e}")
 
-@bot.command(name="xp")
+@bot.slash_command(name="xp")
 async def xp(ctx, member: discord.Member = None):
     try:
         if member is None:
@@ -236,10 +236,10 @@ async def xp(ctx, member: discord.Member = None):
         await check_xp(member)
         await ctx.send(embed=discord.Embed(title="Баланс XP", description=f"{member.mention} имеет `{xp_amount} ⚛︎` XP.", colour=0x48B5D6))
     except Exception as e:
-        print(f"Error in xp command: {e}")
+        print(f"Error in xp slash_command: {e}")
         await ctx.send(embed=discord.Embed(title="Ошибка", description="Произошла ошибка при получении XP.", color=discord.Color.red()), delete_after=5)
 
-@bot.command(name="addxp")
+@bot.slash_command(name="addxp")
 async def addxp(ctx, amount: int, member: discord.Member):
     try:
         if not has_allowed_role(ctx):
@@ -252,10 +252,10 @@ async def addxp(ctx, amount: int, member: discord.Member):
         await send_log(ctx, f"{ctx.author.mention} выдал {member.mention} {amount} баллов.", "+")
         await ctx.send(embed=discord.Embed(title="XP Добавлено", description=f"{member.mention} получил `{amount} ⚛︎` XP.\nНовый баланс: `{new_xp} ⚛︎`", colour=0x48B5D6))
     except Exception as e:
-        print(f"Error in addxp command: {e}")
+        print(f"Error in addxp slash_command: {e}")
         await ctx.send(embed=discord.Embed(title="Ошибка", description="Произошла ошибка при добавлении XP.", color=discord.Color.red()), delete_after=5)
 
-@bot.command(name="remxp")
+@bot.slash_command(name="remxp")
 async def remxp(ctx, amount: int, member: discord.Member):
     try:
         if not has_allowed_role(ctx):
@@ -268,10 +268,10 @@ async def remxp(ctx, amount: int, member: discord.Member):
         await send_log(ctx, f"{ctx.author.mention} снял {member.mention} {amount} баллов.", "-")
         await ctx.send(embed=discord.Embed(title="XP Удалено", description=f"{member.mention} потерял `{amount} ⚛︎` XP.\nНовый баланс: `{new_xp} ⚛︎`", colour=0x48B5D6))
     except Exception as e:
-        print(f"Error in remxp command: {e}")
+        print(f"Error in remxp slash_command: {e}")
         await ctx.send(embed=discord.Embed(title="Ошибка", description="Произошла ошибка при удалении XP.", color=discord.Color.red()), delete_after=5)
 
-@bot.command(name="setxp")
+@bot.slash_command(name="setxp")
 async def setxp(ctx, amount: int, member: discord.Member):
     try:
         if not has_allowed_role(ctx, "setxp"):
@@ -283,10 +283,10 @@ async def setxp(ctx, amount: int, member: discord.Member):
         await send_log(ctx, f"{ctx.author.mention} выставил {member.mention} {amount} баллов.", "=")
         await ctx.send(embed=discord.Embed(title="XP Установлено", description=f"Баланс {member.mention} установлен на `{amount_to_set} ⚛︎`", colour=0x48B5D6))
     except Exception as e:
-        print(f"Error in setxp command: {e}")
+        print(f"Error in setxp slash_command: {e}")
         await ctx.send(embed=discord.Embed(title="Ошибка", description="Произошла ошибка при установке XP.", color=discord.Color.red()), delete_after=5)
 
-@bot.command(name="addxptogroup")
+@bot.slash_command(name="addxptogroup")
 async def addxptogroup(ctx, amount: int, *, mentions: str):
     try:
         if not has_allowed_role(ctx):
@@ -306,10 +306,10 @@ async def addxptogroup(ctx, amount: int, *, mentions: str):
         await send_log(ctx, f"{ctx.author.mention} выдал {amount} баллов группе: {mentions_str}", "+")
         await ctx.send(embed=discord.Embed(title="XP Добавлено группе", description=f"Добавлено по `{amount} ⚛︎` следующим участникам:\n{mentions_str}", colour=0x48B5D6))
     except Exception as e:
-        print(f"Error in addxptogroup command: {e}")
+        print(f"Error in addxptogroup slash_command: {e}")
         await ctx.send(embed=discord.Embed(title="Ошибка", description="Произошла ошибка при добавлении XP группе.", color=discord.Color.red()), delete_after=5)
 
-@bot.command(name="remxpfromgroup")
+@bot.slash_command(name="remxpfromgroup")
 async def remxpfromgroup(ctx, amount: int, *, mentions: str):
     try:
         if not has_allowed_role(ctx):
@@ -329,10 +329,10 @@ async def remxpfromgroup(ctx, amount: int, *, mentions: str):
         await send_log(ctx, f"{ctx.author.mention} снял {amount} баллов группе: {mentions_str}", "-")
         await ctx.send(embed=discord.Embed(title="XP Удалено у группы", description=f"Убрано по `{amount} ⚛︎` у следующих участников:\n{mentions_str}", colour=0x48B5D6))
     except Exception as e:
-        print(f"Error in remxpfromgroup command: {e}")
+        print(f"Error in remxpfromgroup slash_command: {e}")
         await ctx.send(embed=discord.Embed(title="Ошибка", description="Произошла ошибка при удалении XP у группы.", color=discord.Color.red()), delete_after=5)
 
-@bot.command(name="setxpforgroup")
+@bot.slash_command(name="setxpforgroup")
 async def setxpforgroup(ctx, amount: int, *, mentions: str):
     try:
         if not has_allowed_role(ctx, "setxpforgroup"):
@@ -351,10 +351,10 @@ async def setxpforgroup(ctx, amount: int, *, mentions: str):
         await send_log(ctx, f"{ctx.author.mention} выставил {amount} баллов группе: {mentions_str}", "=")
         await ctx.send(embed=discord.Embed(title="XP Установлено группе", description=f"Баланс установлен на `{amount_to_set} ⚛︎` следующим участникам:\n{mentions_str}", colour=0x48B5D6))
     except Exception as e:
-        print(f"Error in setxpforgroup command: {e}")
+        print(f"Error in setxpforgroup slash_command: {e}")
         await ctx.send(embed=discord.Embed(title="Ошибка", description="Произошла ошибка при установке XP группе.", color=discord.Color.red()), delete_after=5)
 
-@bot.command(name="about_bot")
+@bot.slash_command(name="about_bot")
 async def about_bot(ctx):
     try:
         botik = ctx.bot.user
@@ -369,10 +369,10 @@ async def about_bot(ctx):
         embed.add_field(name="ID бота", value=str(botik.id), inline=True)
         await ctx.send(embed=embed)
     except Exception as e:
-        print(f"Error in about_bot command: {e}")
+        print(f"Error in about_bot slash_command: {e}")
         await ctx.send(embed=discord.Embed(title="Ошибка", description="Произошла ошибка при получении информации о боте.", color=discord.Color.red()), delete_after=5)
 
-@bot.command(name="chchannel")
+@bot.slash_command(name="chchannel")
 async def chchannel(ctx, channel: discord.TextChannel):
     try:
         role_ids = {role.id for role in ctx.author.roles}
@@ -389,9 +389,9 @@ async def chchannel(ctx, channel: discord.TextChannel):
         else:
             await ctx.send(embed=discord.Embed(title="Ошибка", description="У вас нет прав на выполнение этой команды.", color=discord.Color.red()), delete_after=5)
     except Exception as e:
-        print(f"Error in chchannel command: {e}")
+        print(f"Error in chchannel slash_command: {e}")
 
-@bot.command(name="chpromchannel")
+@bot.slash_command(name="chpromchannel")
 async def chpromchannel(ctx, channel: discord.TextChannel):
     try:
         role_ids = {role.id for role in ctx.author.roles}
@@ -408,9 +408,9 @@ async def chpromchannel(ctx, channel: discord.TextChannel):
         else:
             await ctx.send(embed=discord.Embed(title="Ошибка", description="У вас нет прав на выполнение этой команды.", color=discord.Color.red()), delete_after=5)
     except Exception as e:
-        print(f"Error in chpromchannel command: {e}")
+        print(f"Error in chpromchannel slash_command: {e}")
 
-@bot.command(name="ask")
+@bot.slash_command(name="ask")
 async def ask(ctx, *, prompt: str):
     try:
         async with ctx.typing():
@@ -426,7 +426,7 @@ async def ask(ctx, *, prompt: str):
             )
         await ctx.send(response.text[:2000])
     except Exception as e:
-        print(f"Error in ask command: {e}")
+        print(f"Error in ask slash_command: {e}")
         await ctx.send(embed=discord.Embed(title="Ошибка", description="Произошла ошибка при обращении к AI.", color=discord.Color.red()), delete_after=5)
 
 Thread(target=run_flask).start()
