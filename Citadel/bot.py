@@ -13,9 +13,14 @@ import certifi
 import ssl
 print(ssl.OPENSSL_VERSION)
 
+load_dotenv(dotenv_path="env.env")
+BOT_TOKEN = os.environ["BOT_TOKEN"]
+GEMINI_TOKEN = os.environ["GEMINI_TOKEN"]
+MONGO_PASSWORD = os.environ["MONGO_PASSWORD"]
+
 ssl_context = ssl.create_default_context(cafile=certifi.where())
 ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
-uri = "mongodb+srv://poopooops1488:2mjHYEfGpMeVDc0S@xp.exi9hjl.mongodb.net/?retryWrites=true&w=majority&appName=XP"
+uri = f"mongodb+srv://poopooops1488:{MONGO_PASSWORD}@xp.exi9hjl.mongodb.net/?retryWrites=true&w=majority&appName=XP"
 
 app = Flask(__name__)
 
@@ -38,10 +43,6 @@ client = AsyncIOMotorClient(
 )
 db = client["XP"]
 collection = db["XP"]
-
-load_dotenv(dotenv_path="env.env")
-BOT_TOKEN = os.environ["BOT_TOKEN"]
-GEMINI_TOKEN = os.environ["GEMINI_TOKEN"]
 
 genai.configure(api_key=GEMINI_TOKEN)
 model = genai.GenerativeModel("models/gemma-3n-e4b-it")
