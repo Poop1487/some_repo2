@@ -414,7 +414,7 @@ async def chpromchannel(ctx, channel: discord.TextChannel):
     except Exception as e:
         print(f"Error in chpromchannel slash_command: {e}")
 
-@bot.slash_command(name="ask")
+@bot.slash_command(name="asktocitadel")
 async def ask(ctx, *, prompt: str):
     try:
         async with ctx.typing():
