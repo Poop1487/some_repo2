@@ -4,3 +4,4 @@ flask==2.3.3
 google-generativeai
 pymongo[srv]==4.5.0
 certifi
+motor

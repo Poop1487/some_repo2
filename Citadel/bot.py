@@ -9,6 +9,7 @@ from threading import Thread
 from google import generativeai as genai
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+from motor.motor_asyncio import AsyncIOMotorClient
 
 uri = "mongodb+srv://poopooops1488:2mjHYEfGpMeVDc0S@xp.exi9hjl.mongodb.net/?retryWrites=true&w=majority&appName=XP"
 
@@ -24,8 +25,7 @@ def run_flask():
 
 url = "https://citadel-hnll.onrender.com"
 
-client = MongoClient(uri, server_api=ServerApi('1'))
-
+client = AsyncIOMotorClient(uri, server_api=ServerApi('1'))
 db = client["XP"]
 collection = db["XP"]
 
@@ -64,9 +64,9 @@ send_test_ranks = {
 
 JSON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "DataBase", "logs_channel.json")
 
-def get_user_xp(user_id: int) -> int:
+async def get_user_xp(user_id: int) -> int:
     try:
-        result = collection.find_one({"user_id": user_id})
+        result = await collection.find_one({"user_id": user_id})
         if result:
             return result["number"]
         return 0
@@ -74,11 +74,11 @@ def get_user_xp(user_id: int) -> int:
         print(f"Error getting user XP: {e}")
         return 0
 
-def set_user_xp(user_id: int, xp: int):
+async def set_user_xp(user_id: int, xp: int):
     try:
-        collection.update_one(
-            {"user_id": 926130802243305512},
-            {"$set": {"number": 200}},
+        await collection.update_one(
+            {"user_id": user_id},
+            {"$set": {"number": xp}},
             upsert=True
         )
     except Exception as e:
@@ -86,7 +86,7 @@ def set_user_xp(user_id: int, xp: int):
 
 async def check_xp(member: discord.Member):
     try:
-        user_xp = get_user_xp(member.id)
+        user_xp = await get_user_xp(member.id)
         if user_xp == 0:
             return
         sorted_ranks = sorted(ranks.items(), key=lambda x: x[1])
@@ -109,7 +109,7 @@ async def check_xp(member: discord.Member):
                     if old_role:
                         await member.remove_roles(old_role)
                 await member.add_roles(next_role)
-                set_user_xp(member.id, 0)
+                await set_user_xp(member.id, 0)
                 try:
                     with open(JSON_PATH, "r", encoding="utf-8") as file:
                         data = json.load(file)
@@ -173,8 +173,8 @@ async def on_ready():
         for guild in bot.guilds:
             for member in guild.members:
                 if not member.bot:
-                    if get_user_xp(member.id) == 0:
-                        set_user_xp(member.id, 0)
+                    if await get_user_xp(member.id) == 0:
+                        await set_user_xp(member.id, 0)
     except Exception as e:
         print(f"Error initializing users: {e}")
 
@@ -202,8 +202,8 @@ async def on_ready():
 async def on_member_join(member):
     try:
         if not member.bot:
-            if get_user_xp(member.id) == 0:
-                set_user_xp(member.id, 0)
+            if await get_user_xp(member.id) == 0:
+                await set_user_xp(member.id, 0)
             await check_xp(member)
     except Exception as e:
         print(f"Error in on_member_join: {e}")
@@ -232,7 +232,7 @@ async def xp(ctx, member: discord.Member = None):
     try:
         if member is None:
             member = ctx.author
-        xp_amount = get_user_xp(member.id)
+        xp_amount = await get_user_xp(member.id)
         await check_xp(member)
         await ctx.send(embed=discord.Embed(title="Баланс XP", description=f"{member.mention} имеет `{xp_amount} ⚛︎` XP.", colour=0x48B5D6))
     except Exception as e:
@@ -245,9 +245,9 @@ async def addxp(ctx, amount: int, member: discord.Member):
         if not has_allowed_role(ctx):
             await ctx.send(embed=discord.Embed(title="Ошибка", description="У вас нет прав на выполнение этой команды.", color=discord.Color.red()), delete_after=5)
             return
-        current_xp = get_user_xp(member.id)
+        current_xp = await get_user_xp(member.id)
         new_xp = current_xp + amount
-        set_user_xp(member.id, new_xp)
+        await set_user_xp(member.id, new_xp)
         await check_xp(member)
         await send_log(ctx, f"{ctx.author.mention} выдал {member.mention} {amount} баллов.", "+")
         await ctx.send(embed=discord.Embed(title="XP Добавлено", description=f"{member.mention} получил `{amount} ⚛︎` XP.\nНовый баланс: `{new_xp} ⚛︎`", colour=0x48B5D6))
@@ -261,9 +261,9 @@ async def remxp(ctx, amount: int, member: discord.Member):
         if not has_allowed_role(ctx):
             await ctx.send(embed=discord.Embed(title="Ошибка", description="У вас нет прав на выполнение этой команды.", color=discord.Color.red()), delete_after=5)
             return
-        current_xp = get_user_xp(member.id)
+        current_xp = await get_user_xp(member.id)
         new_xp = max(current_xp - amount, 0)
-        set_user_xp(member.id, new_xp)
+        await set_user_xp(member.id, new_xp)
         await check_xp(member)
         await send_log(ctx, f"{ctx.author.mention} снял {member.mention} {amount} баллов.", "-")
         await ctx.send(embed=discord.Embed(title="XP Удалено", description=f"{member.mention} потерял `{amount} ⚛︎` XP.\nНовый баланс: `{new_xp} ⚛︎`", colour=0x48B5D6))
@@ -278,7 +278,7 @@ async def setxp(ctx, amount: int, member: discord.Member):
             await ctx.send(embed=discord.Embed(title="Ошибка", description="У вас нет прав на выполнение этой команды.", color=discord.Color.red()), delete_after=5)
             return
         amount_to_set = max(amount, 0)
-        set_user_xp(member.id, amount_to_set)
+        await set_user_xp(member.id, amount_to_set)
         await check_xp(member)
         await send_log(ctx, f"{ctx.author.mention} выставил {member.mention} {amount} баллов.", "=")
         await ctx.send(embed=discord.Embed(title="XP Установлено", description=f"Баланс {member.mention} установлен на `{amount_to_set} ⚛︎`", colour=0x48B5D6))
@@ -298,9 +298,9 @@ async def addxptogroup(ctx, amount: int, *, mentions: str):
             await ctx.send(embed=discord.Embed(title="Ошибка", description="Не удалось найти указанных участников.", colour=0x48B5D6))
             return
         for member in members:
-            current_xp = get_user_xp(member.id)
+            current_xp = await get_user_xp(member.id)
             new_xp = current_xp + amount
-            set_user_xp(member.id, new_xp)
+            await set_user_xp(member.id, new_xp)
             await check_xp(member)
         mentions_str = "\n".join(member.mention for member in members)
         await send_log(ctx, f"{ctx.author.mention} выдал {amount} баллов группе: {mentions_str}", "+")
@@ -321,9 +321,9 @@ async def remxpfromgroup(ctx, amount: int, *, mentions: str):
             await ctx.send(embed=discord.Embed(title="Ошибка", description="Не удалось найти указанных участников.", colour=0x48B5D6))
             return
         for member in members:
-            current_xp = get_user_xp(member.id)
+            current_xp = await get_user_xp(member.id)
             new_xp = max(current_xp - amount, 0)
-            set_user_xp(member.id, new_xp)
+            await set_user_xp(member.id, new_xp)
             await check_xp(member)
         mentions_str = "\n".join(member.mention for member in members)
         await send_log(ctx, f"{ctx.author.mention} снял {amount} баллов группе: {mentions_str}", "-")
@@ -345,7 +345,7 @@ async def setxpforgroup(ctx, amount: int, *, mentions: str):
             return
         amount_to_set = max(amount, 0)
         for member in members:
-            set_user_xp(member.id, amount_to_set)
+            await set_user_xp(member.id, amount_to_set)
             await check_xp(member)
         mentions_str = "\n".join(member.mention for member in members)
         await send_log(ctx, f"{ctx.author.mention} выставил {amount} баллов группе: {mentions_str}", "=")
