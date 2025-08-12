@@ -1,5 +1,4 @@
 import discord
-from discord.ext import slash_commands
 from dotenv import load_dotenv
 import os
 import json
